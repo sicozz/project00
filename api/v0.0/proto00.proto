@@ -1,0 +1,17 @@
+syntax = "proto3";
+option go_package = "github.com/sicozz/project00/proto00/v1.0/proto00";
+
+service Linker {
+    rpc Info (InfoReq) returns (InfoRes);
+    rpc Subscribe (SubscribeReq) returns (stream Heartbeat);
+}
+
+message InfoReq {}
+message InfoRes {
+    string version = 1;
+    string banner = 2;
+    int64 market_value = 3;
+}
+
+message SubscribeReq {}
+message Heartbeat {}
