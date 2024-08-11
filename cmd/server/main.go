@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
+	"github.com/sicozz/project00/config"
 	"google.golang.org/grpc"
 )
 
@@ -17,14 +19,19 @@ func (s Linker) Info(ctx context.Context, req *proto00.InfoReq) (res *proto00.In
 }
 
 func main() {
-	lis, err := net.Listen("tcp", "[::]:50051")
+	conf := config.BuildConfig()
+	// logger
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", conf.Host, conf.Port))
 	if err != nil {
-		println("Cannot create listener %s", err)
+		println("Cannot create listener:", err)
 		return
 	}
+	// server setup
 	serverRegistrar := grpc.NewServer()
 	service := &Linker{}
 	proto00.RegisterLinkerServer(serverRegistrar, service)
+	println("Listening on", conf.Port, "...")
+	// serve
 	err = serverRegistrar.Serve(lis)
 	if err != nil {
 		println("Cannot create listener %s", err)
