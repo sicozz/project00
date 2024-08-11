@@ -10,7 +10,7 @@ import (
 
 const (
 	DEFAULT_HOST = "[::]"
-	DEFAULT_PORT = "50051"
+	DEFAULT_PORT = "50050"
 )
 
 type Config struct {

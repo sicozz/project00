@@ -7,6 +7,7 @@ import (
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/config"
+	"github.com/sicozz/project00/utils"
 	"google.golang.org/grpc"
 )
 
@@ -19,21 +20,23 @@ func (s Linker) Info(ctx context.Context, req *proto00.InfoReq) (res *proto00.In
 }
 
 func main() {
+	utils.InitLog(utils.DEFAULT_LOG_FILE)
 	conf := config.BuildConfig()
-	// logger
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", conf.Host, conf.Port))
 	if err != nil {
-		println("Cannot create listener:", err)
+		utils.Error(fmt.Sprintf("Canot create listener: %s", err))
 		return
 	}
-	// server setup
-	serverRegistrar := grpc.NewServer()
-	service := &Linker{}
-	proto00.RegisterLinkerServer(serverRegistrar, service)
-	println("Listening on", conf.Port, "...")
-	// serve
-	err = serverRegistrar.Serve(lis)
+	server := buildServer()
+	err = server.Serve(lis)
 	if err != nil {
-		println("Cannot create listener %s", err)
+		utils.Error(fmt.Sprintf("Cannot serve %s", err))
 	}
+}
+
+func buildServer() *grpc.Server {
+	server := grpc.NewServer()
+	service := &Linker{}
+	proto00.RegisterLinkerServer(server, service)
+	return server
 }
