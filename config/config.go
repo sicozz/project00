@@ -35,6 +35,10 @@ func BuildConfig() Config {
 	}
 }
 
+func (c *Config) GetBindAddr() string {
+	return fmt.Sprintf("%s:%s", c.Host, c.Port)
+}
+
 func getEnvElseDefault(varName, defaultValue string) string {
 	envVar := os.Getenv(varName)
 	if envVar == "" {
