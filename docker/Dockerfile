@@ -1,17 +1,16 @@
 FROM golang:1.22 AS builder
 ARG TAG="project00-0.0.0"
-ENV TAG=$TAG
+ENV TAG=${TAG}
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o /$TAG .
+RUN go build -o /app/${TAG} ./cmd/server/main.go
 
-# FROM alpine:latest
+# Stage 2: Runner
 FROM debian:12-slim AS runner
 ARG TAG="project00-0.0.0"
-ENV TAG=$TAG
+ENV TAG=${TAG}
 WORKDIR /
-COPY --from=builder /$TAG .
-# EXPOSE 50051
-CMD /$TAG
+COPY --from=builder /app/${TAG} /${TAG}
+CMD /${TAG}

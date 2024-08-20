@@ -1,5 +1,5 @@
 APP				?= project00
-APP_VERSION 	?= 0.0.1
+APP_VERSION		?= 0.0.1
 TAG				?= $(APP)-$(APP_VERSION)
 CLIENT_TAG		?= $(APP)_client-$(APP_VERSION)
 SERVER_ENTRY	?= cmd/server/main.go
@@ -7,7 +7,7 @@ CLIENT_ENTRY	?= cmd/client/main.go
 SERVER_BIN		?= bin/$(TAG)
 CLIENT_BIN		?= bin/$(CLIENT_TAG)
 DOCKER_TAG		?= $(APP):$(APP_VERSION)
-DOCKER_CONF 	?= ./docker
+DOCKER_CONF		?= ./docker
 API_VERSION		?= 0.0
 PROTO_DIR		?= api/v$(API_VERSION)
 
