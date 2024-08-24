@@ -13,4 +13,6 @@ message InfoRes {
 }
 
 message SubscribeReq {}
-message Heartbeat {}
+message Heartbeat {
+    string term = 1;
+}
