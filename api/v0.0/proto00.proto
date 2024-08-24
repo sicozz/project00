@@ -10,7 +10,6 @@ message InfoReq {}
 message InfoRes {
     string version = 1;
     string banner = 2;
-    int64 market_value = 3;
 }
 
 message SubscribeReq {}
