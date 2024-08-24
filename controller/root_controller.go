@@ -1,4 +1,4 @@
-package rootcontroller
+package controller
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/config"
+	"github.com/sicozz/project00/server"
 	"github.com/sicozz/project00/utils"
 	"google.golang.org/grpc"
 )
@@ -31,7 +32,7 @@ func NewRootController() (rc RootController, err error) {
 		return RootController{}, err
 	}
 	srv := grpc.NewServer()
-	linkerSrv := &LinkerService{}
+	linkerSrv := &server.LinkerService{}
 	proto00.RegisterLinkerServer(srv, linkerSrv)
 	exitC := make(chan int)
 	return RootController{conf: conf, exitC: exitC, srv: srv, lis: lis}, nil
@@ -73,13 +74,4 @@ func (rc *RootController) handleSignals() {
 	close(signalC)
 	utils.Info(fmt.Sprintf("Recieved signal: %v", rcvdSignal))
 	rc.shutDown(0)
-}
-
-// TODO: Move LinkerService to its correspondent module
-type LinkerService struct {
-	proto00.UnimplementedLinkerServer
-}
-
-func (s LinkerService) Info(ctx context.Context, req *proto00.InfoReq) (res *proto00.InfoRes, err error) {
-	return &proto00.InfoRes{Version: "0.0", Banner: "PROJECT00", MarketValue: 21}, nil
 }
