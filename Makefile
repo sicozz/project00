@@ -63,3 +63,10 @@ distenv-monitor:
 
 distenv-connect:
 	NODE=$(NODE) docker exec -it $(NODE) /bin/bash
+
+# RUN
+run-server:
+	./$(SERVER_BIN)
+
+run-client:
+	./$(CLIENT_BIN)
