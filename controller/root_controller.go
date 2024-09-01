@@ -18,12 +18,12 @@ import (
 )
 
 type RootController struct {
-	conf     config.Config
-	exitC    chan int
-	srv      *grpc.Server
-	server00 *server.Server00
-	stm00    *statemachine.StateMachine00
-	lis      net.Listener
+	stm   *statemachine.StateMachine00
+	srv   *server.Server00
+	lis   net.Listener
+	gSrv  *grpc.Server
+	exitC chan int
+	conf  config.Config
 }
 
 func NewRootController() (rc RootController, err error) {
@@ -34,18 +34,19 @@ func NewRootController() (rc RootController, err error) {
 		utils.Error(fmt.Sprintf("Cannot create listener: %v", err))
 		return RootController{}, err
 	}
-	srv := grpc.NewServer()
-	server00 := server.NewServer00()
-	proto00.RegisterLinkerServer(srv, server00)
-	stm00 := statemachine.NewStateMachine00(server00.STMCh)
 	exitC := make(chan int)
+	stmAndSrvCh := make(chan string)
+	stm := statemachine.NewStateMachine00(stmAndSrvCh)
+	srv := server.NewServer00(stmAndSrvCh)
+	gSrv := grpc.NewServer()
+	proto00.RegisterLinkerServer(gSrv, srv)
 	return RootController{
-		conf:     conf,
-		exitC:    exitC,
-		srv:      srv,
-		server00: server00,
-		stm00:    stm00,
-		lis:      lis,
+		stm:   stm,
+		srv:   srv,
+		lis:   lis,
+		gSrv:  gSrv,
+		exitC: exitC,
+		conf:  conf,
 	}, nil
 }
 
@@ -53,28 +54,39 @@ func (rc *RootController) Launch() {
 	// TODO: Add options for project00
 	go rc.handleSignals()
 	go rc.startServer()
-	go rc.stm00.Run()
+	go rc.startStateMachine()
 	eC := <-rc.exitC
 	close(rc.exitC)
 	utils.Info(fmt.Sprintf("Exiting project00: %v", eC))
-	rc.server00.Shutdown()
 }
 
 func (rc *RootController) shutDown(exitCode int) {
 	_, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	rc.srv.GracefulStop()
-	utils.Info("Shuting down: Server stoped")
+	rc.srv.Shutdown()
+	utils.Info("Shutting down: server stoped")
+	rc.gSrv.GracefulStop()
+	utils.Info("Shuting down: gRPC server stoped")
 	rc.lis.Close()
-	utils.Info("Shuting down: Listener closed")
+	utils.Info("Shuting down: listener closed")
 	rc.exitC <- exitCode
 }
 
 func (rc *RootController) startServer() error {
 	utils.Info(fmt.Sprintf("Server listening on port: %v", rc.conf.Port))
-	err := rc.srv.Serve(rc.lis)
+	err := rc.gSrv.Serve(rc.lis)
 	if err != nil {
 		utils.Error(fmt.Sprintf("Server crashed on: %v", err))
+		rc.shutDown(1)
+	}
+	return nil
+}
+
+func (rc *RootController) startStateMachine() error {
+	utils.Info(fmt.Sprintf("State machine activated"))
+	err := rc.stm.Run()
+	if err != nil {
+		utils.Error(fmt.Sprintf("State machine crashed on: %v", err))
 		rc.shutDown(1)
 	}
 	return nil

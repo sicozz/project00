@@ -17,14 +17,14 @@ func QueryGetServiceInfo() (*proto00.InfoRes, error) {
 	}, nil
 }
 
-func HandleSubscription(stream proto00.Linker_SubscribeServer, stmCh chan string) error {
+func HandleSubscription(stream proto00.Linker_SubscribeServer, stmC chan string) error {
 	term := 1000
 	for {
 		select {
 		case <-stream.Context().Done():
 			err := stream.Context().Err()
 			utils.Info(fmt.Sprintf("Follower unsubscribed: %v", err))
-			stmCh <- fmt.Sprintf("%v", term)
+			stmC <- fmt.Sprintf("%v", term)
 			return err
 		default:
 			stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", term)})
