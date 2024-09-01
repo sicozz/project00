@@ -18,8 +18,8 @@ import (
 )
 
 type RootController struct {
-	stm   *statemachine.StateMachine00
-	srv   *server.Server00
+	stm   statemachine.StateMachine
+	srv   server.Server
 	lis   net.Listener
 	gSrv  *grpc.Server
 	exitC chan int
@@ -36,13 +36,13 @@ func NewRootController() (rc RootController, err error) {
 	}
 	exitC := make(chan int)
 	stmAndSrvCh := make(chan string)
-	stm := statemachine.NewStateMachine00(stmAndSrvCh)
-	srv := server.NewServer00(stmAndSrvCh)
+	stm00 := statemachine.NewStateMachine00(stmAndSrvCh)
+	srv00 := server.NewServer00(stmAndSrvCh)
 	gSrv := grpc.NewServer()
-	proto00.RegisterLinkerServer(gSrv, srv)
+	proto00.RegisterLinkerServer(gSrv, srv00)
 	return RootController{
-		stm:   stm,
-		srv:   srv,
+		stm:   statemachine.StateMachine(stm00),
+		srv:   server.Server(srv00),
 		lis:   lis,
 		gSrv:  gSrv,
 		exitC: exitC,
@@ -57,7 +57,7 @@ func (rc *RootController) Launch() {
 	go rc.startStateMachine()
 	eC := <-rc.exitC
 	close(rc.exitC)
-	utils.Info(fmt.Sprintf("Exiting project00: %v", eC))
+	utils.Info(fmt.Sprintf("Exiting %v: %v", utils.BANNER, eC))
 }
 
 func (rc *RootController) shutDown(exitCode int) {

@@ -7,7 +7,7 @@ import (
 )
 
 type StateMachine interface {
-	Run()
+	Run() error
 }
 
 type StateMachine00 struct {
@@ -20,7 +20,7 @@ func NewStateMachine00(srvC chan string) *StateMachine00 {
 
 func (s *StateMachine00) Run() error {
 	for n := range s.srvC {
-		utils.Info(fmt.Sprintf("SRVCH: ON %v", n))
+		utils.Info(fmt.Sprintf("STM (from: SRV): Unsubscribed at %v", n))
 	}
 	return nil
 }
