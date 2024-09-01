@@ -12,15 +12,18 @@ import (
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/config"
 	"github.com/sicozz/project00/server"
+	"github.com/sicozz/project00/statemachine"
 	"github.com/sicozz/project00/utils"
 	"google.golang.org/grpc"
 )
 
 type RootController struct {
-	conf  config.Config
-	exitC chan int
-	srv   *grpc.Server
-	lis   net.Listener
+	conf     config.Config
+	exitC    chan int
+	srv      *grpc.Server
+	server00 *server.Server00
+	stm00    *statemachine.StateMachine00
+	lis      net.Listener
 }
 
 func NewRootController() (rc RootController, err error) {
@@ -32,19 +35,29 @@ func NewRootController() (rc RootController, err error) {
 		return RootController{}, err
 	}
 	srv := grpc.NewServer()
-	linkerSrv := &server.LinkerService{}
-	proto00.RegisterLinkerServer(srv, linkerSrv)
+	server00 := server.NewServer00()
+	proto00.RegisterLinkerServer(srv, server00)
+	stm00 := statemachine.NewStateMachine00(server00.STMCh)
 	exitC := make(chan int)
-	return RootController{conf: conf, exitC: exitC, srv: srv, lis: lis}, nil
+	return RootController{
+		conf:     conf,
+		exitC:    exitC,
+		srv:      srv,
+		server00: server00,
+		stm00:    stm00,
+		lis:      lis,
+	}, nil
 }
 
 func (rc *RootController) Launch() {
 	// TODO: Add options for project00
 	go rc.handleSignals()
 	go rc.startServer()
+	go rc.stm00.Run()
 	eC := <-rc.exitC
 	close(rc.exitC)
 	utils.Info(fmt.Sprintf("Exiting project00: %v", eC))
+	rc.server00.Shutdown()
 }
 
 func (rc *RootController) shutDown(exitCode int) {
