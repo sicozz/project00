@@ -22,7 +22,9 @@ func HandleSubscription(stream proto00.Linker_SubscribeServer) error {
 	for {
 		select {
 		case <-stream.Context().Done():
-			return stream.Context().Err()
+			err := stream.Context().Err()
+			utils.Info(fmt.Sprintf("Follower unsubscribed: %v", err))
+			return err
 		default:
 			stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", term)})
 			utils.Info(fmt.Sprintf("Sent heartbeat: %v", term))
