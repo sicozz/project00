@@ -28,7 +28,7 @@ func HandleSubscription(stream proto00.Linker_SubscribeServer, stmC chan string)
 			return err
 		default:
 			stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", term)})
-			utils.Info(fmt.Sprintf("Sent heartbeat: %v", term))
+			stmC <- "evHeartbeat"
 			term = term + 1
 			time.Sleep(1 * time.Second)
 		}

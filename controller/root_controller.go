@@ -36,7 +36,7 @@ func NewRootController() (rc RootController, err error) {
 	}
 	exitC := make(chan int)
 	stmAndSrvCh := make(chan string)
-	stm00 := statemachine.NewStateMachine00(stmAndSrvCh)
+	stm00 := statemachine.NewRaftSTM(stmAndSrvCh)
 	srv00 := server.NewServer00(stmAndSrvCh)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)

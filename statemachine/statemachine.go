@@ -10,17 +10,54 @@ type StateMachine interface {
 	Run() error
 }
 
-type StateMachine00 struct {
+type RaftSTM struct {
 	srvC chan string
 }
 
-func NewStateMachine00(srvC chan string) *StateMachine00 {
-	return &StateMachine00{srvC: srvC}
+type state string
+
+const (
+	stFollower state = "stFollower"
+)
+
+type event string
+
+const (
+	evHeartbeat     event = "evHeartbeat"
+	evLeaderTimeout event = "evLeaderTimeout"
+)
+
+type transition string
+
+const (
+	tsFollowerToLeader transition = "tsFollowerToLeader"
+)
+
+func NewRaftSTM(srvC chan string) *RaftSTM {
+	return &RaftSTM{srvC: srvC}
 }
 
-func (s *StateMachine00) Run() error {
-	for n := range s.srvC {
-		utils.Info(fmt.Sprintf("STM (from: SRV): Unsubscribed at %v", n))
+func (s *RaftSTM) Run() error {
+	go s.handleServerChan()
+	go s.handleClientChan()
+	return nil
+}
+
+func (s *RaftSTM) handleServerChan() error {
+	// TODO: Implement events
+	for ev := range s.srvC {
+		switch ev {
+		case string(evHeartbeat):
+			utils.Info(fmt.Sprintf("SRV: %v", ev))
+		case string(evLeaderTimeout):
+			utils.Info(fmt.Sprintf("SRV: %v", ev))
+		default:
+			utils.Info(fmt.Sprintf("SRV: %v (unknown)", ev))
+		}
 	}
+	return nil
+}
+
+func (s *RaftSTM) handleClientChan() error {
 	return nil
 }
