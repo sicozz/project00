@@ -36,7 +36,12 @@ func NewRootController() (rc RootController, err error) {
 	}
 	exitC := make(chan int)
 	stmAndSrvCh := make(chan string)
-	stm00 := statemachine.NewRaftSTM(stmAndSrvCh)
+	hosts, err := utils.HostDiscovery()
+	if err != nil {
+		utils.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
+		return RootController{}, err
+	}
+	stm00 := statemachine.NewRaftSTM(stmAndSrvCh, hosts)
 	srv00 := server.NewServer00(stmAndSrvCh)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)
