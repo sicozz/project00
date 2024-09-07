@@ -28,6 +28,7 @@ type RootController struct {
 
 func NewRootController() (rc RootController, err error) {
 	conf := config.BuildConfig()
+	utils.InitLog(conf.LogFile)
 	addr := conf.GetBindAddr()
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
