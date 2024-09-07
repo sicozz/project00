@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	proto00 "github.com/sicozz/project00/api/v0.0"
-	"github.com/sicozz/project00/datatype"
 	"github.com/sicozz/project00/utils"
 	"google.golang.org/grpc"
 )
@@ -20,7 +19,7 @@ type RaftSTM struct {
 	srvC  chan string
 	trs   map[event]transition
 	st    state
-	hosts map[uuid.UUID]datatype.Host
+	hosts map[uuid.UUID]utils.Host
 }
 
 type state string
@@ -43,7 +42,7 @@ const (
 	tsFollowerToLeader transition = "tsFollowerToLeader"
 )
 
-func NewRaftSTM(srvC chan string, hosts map[uuid.UUID]datatype.Host) *RaftSTM {
+func NewRaftSTM(srvC chan string, hosts map[uuid.UUID]utils.Host) *RaftSTM {
 	trs := map[event]transition{
 		evLeaderTimeout: tsFollowerToLeader,
 	}

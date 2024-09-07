@@ -36,7 +36,7 @@ func NewRootController() (rc RootController, err error) {
 	}
 	exitC := make(chan int)
 	stmAndSrvCh := make(chan string)
-	hosts, err := utils.HostDiscovery()
+	hosts, err := utils.HostDiscovery(conf.HostsFile)
 	if err != nil {
 		utils.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
 		return RootController{}, err
