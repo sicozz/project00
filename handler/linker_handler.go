@@ -10,14 +10,20 @@ import (
 )
 
 func QueryGetServiceInfo() (*proto00.InfoRes, error) {
-	programInfo := datatype.ProgramInfo{Version: utils.VERSION, Banner: utils.BANNER}
+	programInfo := datatype.ProgramInfo{
+		Version: utils.VERSION,
+		Banner:  utils.BANNER,
+	}
 	return &proto00.InfoRes{
 		Version: programInfo.Version,
 		Banner:  programInfo.Banner,
 	}, nil
 }
 
-func HandleSubscription(stream proto00.Linker_SubscribeServer, stmC chan string) error {
+func HandleSubscription(
+	stream proto00.Linker_SubscribeServer,
+	stmC chan string,
+) error {
 	term := 1000
 	for {
 		select {

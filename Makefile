@@ -70,3 +70,7 @@ run-server:
 
 run-client:
 	./$(CLIENT_BIN)
+
+# LINT
+lint:
+	@ golines --max-len=80 -w .

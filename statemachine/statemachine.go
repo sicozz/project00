@@ -43,12 +43,22 @@ const (
 	tsFollowerToLeader transition = "tsFollowerToLeader"
 )
 
-func NewRaftSTM(srvC chan string, hosts map[uuid.UUID]utils.Host, selfHostId uuid.UUID) *RaftSTM {
+func NewRaftSTM(
+	srvC chan string,
+	hosts map[uuid.UUID]utils.Host,
+	selfHostId uuid.UUID,
+) *RaftSTM {
 	trs := map[event]transition{
 		evLeaderTimeout: tsFollowerToLeader,
 	}
 
-	return &RaftSTM{srvC: srvC, trs: trs, st: stFollower, hosts: hosts, selfHostId: selfHostId}
+	return &RaftSTM{
+		srvC:       srvC,
+		trs:        trs,
+		st:         stFollower,
+		hosts:      hosts,
+		selfHostId: selfHostId,
+	}
 }
 
 func (s *RaftSTM) Run() error {
@@ -97,7 +107,12 @@ func (s *RaftSTM) handleClientChan() error {
 		req := &proto00.SubscribeReq{}
 		stream, err := client.Subscribe(context.Background(), req)
 		if err != nil {
-			utils.Error(fmt.Sprintf("[Client] Error while calling Subscribe RPC: %v", err))
+			utils.Error(
+				fmt.Sprintf(
+					"[Client] Error while calling Subscribe RPC: %v",
+					err,
+				),
+			)
 			return err
 		}
 		for {
@@ -106,7 +121,12 @@ func (s *RaftSTM) handleClientChan() error {
 				break
 			}
 			if err != nil {
-				utils.Error(fmt.Sprintf("[Client] Error while receiving heartbeat: %v", err))
+				utils.Error(
+					fmt.Sprintf(
+						"[Client] Error while receiving heartbeat: %v",
+						err,
+					),
+				)
 			}
 			utils.Info(fmt.Sprintf("[Client] Heartbeat [%v]", resp))
 		}
