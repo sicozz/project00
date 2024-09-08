@@ -16,11 +16,11 @@ type StateMachine interface {
 }
 
 type RaftSTM struct {
-	srvC       chan string
-	trs        map[event]transition
-	st         state
-	hosts      map[uuid.UUID]utils.Host
-	selfHostId uuid.UUID
+	srvC        chan string
+	trs         map[event]transition
+	st          state
+	hosts       map[uuid.UUID]utils.Host
+	localhostId uuid.UUID
 }
 
 type state string
@@ -53,11 +53,11 @@ func NewRaftSTM(
 	}
 
 	return &RaftSTM{
-		srvC:       srvC,
-		trs:        trs,
-		st:         stFollower,
-		hosts:      hosts,
-		selfHostId: selfHostId,
+		srvC:        srvC,
+		trs:         trs,
+		st:          stFollower,
+		hosts:       hosts,
+		localhostId: selfHostId,
 	}
 }
 

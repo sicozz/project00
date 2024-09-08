@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -26,7 +27,7 @@ func (h *Host) Ip() string {
 	return h.ip
 }
 
-func HostDiscovery(hostsFile string) (map[uuid.UUID]Host, error) {
+func DiscoverHosts(hostsFile string) (map[uuid.UUID]Host, error) {
 	hostsDb, err := os.Open(hostsFile)
 	if err != nil {
 		Error(fmt.Sprintf("Failed to open hosts file: %v", hostsFile))
@@ -42,30 +43,39 @@ func HostDiscovery(hostsFile string) (map[uuid.UUID]Host, error) {
 	return hosts, nil
 }
 
-func GetSelfHostId(hosts map[uuid.UUID]Host) (uuid.UUID, error) {
-	// for _, h := range hosts {
-	// 	// if h.Ip() ==
-	// }
-	getSelfIp()
-	return uuid.New(), nil
+func GetLocalHostIp(hosts map[uuid.UUID]Host) (uuid.UUID, error) {
+	ip, err := getLocalIp()
+	if err != nil {
+		return uuid.New(), err
+	}
+	for _, h := range hosts {
+		if h.Ip() == ip {
+			Debug(fmt.Sprintf("localhost: %v", h))
+			return h.Id(), nil
+		}
+	}
+	return uuid.New(), errors.New("Failed to get localhost ip")
 }
 
-func getSelfIp() (net.IP, error) {
+func getLocalIp() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		Error(fmt.Sprintf("Failed to query net interfaces address: %v", err))
-		return nil, err
+		return "", err
 	}
 	for _, addr := range addrs {
-		ipNet, ok := addr.(*net.IPNet)
-		if !ok || ipNet.IP.IsLoopback() {
-			continue // Ignore loopback addresses (e.g., 127.0.0.1)
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
 		}
-		if ipNet.IP.To4() != nil {
-			Debug(fmt.Sprintf("IPv4: %v", ipNet.IP.String()))
-		} else {
-			Debug(fmt.Sprintf("IPv6: %v", ipNet.IP.String()))
+
+		if ip.IsLoopback() || ip.To4() == nil {
+			continue
 		}
+
+		return ip.String(), nil
 	}
-	return nil, nil
+	return "", errors.New("Failed to get local ip")
 }
