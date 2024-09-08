@@ -16,10 +16,11 @@ type StateMachine interface {
 }
 
 type RaftSTM struct {
-	srvC  chan string
-	trs   map[event]transition
-	st    state
-	hosts map[uuid.UUID]utils.Host
+	srvC       chan string
+	trs        map[event]transition
+	st         state
+	hosts      map[uuid.UUID]utils.Host
+	selfHostId uuid.UUID
 }
 
 type state string
@@ -42,11 +43,12 @@ const (
 	tsFollowerToLeader transition = "tsFollowerToLeader"
 )
 
-func NewRaftSTM(srvC chan string, hosts map[uuid.UUID]utils.Host) *RaftSTM {
+func NewRaftSTM(srvC chan string, hosts map[uuid.UUID]utils.Host, selfHostId uuid.UUID) *RaftSTM {
 	trs := map[event]transition{
 		evLeaderTimeout: tsFollowerToLeader,
 	}
-	return &RaftSTM{srvC: srvC, trs: trs, st: stFollower, hosts: hosts}
+
+	return &RaftSTM{srvC: srvC, trs: trs, st: stFollower, hosts: hosts, selfHostId: selfHostId}
 }
 
 func (s *RaftSTM) Run() error {

@@ -42,7 +42,12 @@ func NewRootController() (rc RootController, err error) {
 		utils.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
 		return RootController{}, err
 	}
-	stm00 := statemachine.NewRaftSTM(stmAndSrvCh, hosts)
+	selfHostId, err := utils.GetSelfHostId(hosts)
+	if err != nil {
+		utils.Error(fmt.Sprintf("Failed to get own host: %v", err))
+		return RootController{}, err
+	}
+	stm00 := statemachine.NewRaftSTM(stmAndSrvCh, hosts, selfHostId)
 	srv00 := server.NewServer00(stmAndSrvCh)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)
