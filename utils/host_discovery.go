@@ -50,7 +50,6 @@ func GetLocalHostIp(hosts map[uuid.UUID]Host) (uuid.UUID, error) {
 	}
 	for _, h := range hosts {
 		if h.Ip() == ip {
-			Debug(fmt.Sprintf("localhost: %v", h))
 			return h.Id(), nil
 		}
 	}

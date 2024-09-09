@@ -47,8 +47,11 @@ func NewRootController() (rc RootController, err error) {
 		utils.Error(fmt.Sprintf("Failed to get own host: %v", err))
 		return RootController{}, err
 	}
-	utils.Debug(fmt.Sprintf("LOCAL IP: %v", localhostId))
 	stm00 := statemachine.NewRaftSTM(stmAndSrvCh, hosts, localhostId)
+	localhost := hosts[localhostId]
+	if localhost.Ip() == "192.168.100.10" {
+		stm00.TmpSetLeaderState()
+	}
 	srv00 := server.NewServer00(stmAndSrvCh)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)

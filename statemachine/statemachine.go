@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/uuid"
 	proto00 "github.com/sicozz/project00/api/v0.0"
@@ -80,6 +81,15 @@ func (s *RaftSTM) handleServerChan() error {
 			default:
 				utils.Info(fmt.Sprintf("[Server] Follower: %v (unknown)", ev))
 			}
+		case stLeader:
+			switch ev {
+			case string(evHeartbeat):
+				utils.Info(fmt.Sprintf("[Server] Leader: %v", ev))
+			case string(evLeaderTimeout):
+				utils.Info(fmt.Sprintf("[Server] Leader: %v", ev))
+			default:
+				utils.Info(fmt.Sprintf("[Server] Leader: %v (unknown)", ev))
+			}
 		default:
 			utils.Error(fmt.Sprintf("Bad stm.st %v", s.st))
 		}
@@ -88,22 +98,17 @@ func (s *RaftSTM) handleServerChan() error {
 }
 
 func (s *RaftSTM) handleClientChan() error {
-	// create client
-	comodin := 0
-	targetNode := fmt.Sprintf("node0%v:5005%v", comodin, comodin)
-	conn, err := grpc.Dial(targetNode, grpc.WithInsecure())
-	for err != nil {
-		utils.Error(fmt.Sprintf("[Client] Failed to connect: %v", err))
-		comodin = 1 - comodin
-		targetNode = fmt.Sprintf("node0%v:5005%v", comodin, comodin)
-		conn, err = grpc.Dial(targetNode, grpc.WithInsecure())
-		// return err
-	}
-	defer conn.Close()
-	client := proto00.NewLinkerClient(conn)
-
 	switch s.st {
 	case stFollower:
+		targetNode := "192.168.100.10:50050"
+		conn, err := grpc.Dial(targetNode, grpc.WithInsecure())
+		if err != nil {
+			utils.Error(fmt.Sprintf("[Client] Failed to connect: %v", err))
+			conn, err = grpc.Dial(targetNode, grpc.WithInsecure())
+			// return err
+		}
+		defer conn.Close()
+		client := proto00.NewLinkerClient(conn)
 		req := &proto00.SubscribeReq{}
 		stream, err := client.Subscribe(context.Background(), req)
 		if err != nil {
@@ -130,8 +135,33 @@ func (s *RaftSTM) handleClientChan() error {
 			}
 			utils.Info(fmt.Sprintf("[Client] Heartbeat [%v]", resp))
 		}
+	case stLeader:
+		time.Sleep(3 * time.Second)
+		targetNode := "192.168.100.11:50051"
+		conn, err := grpc.Dial(targetNode, grpc.WithInsecure())
+		if err != nil {
+			utils.Error(fmt.Sprintf("[Client] Failed to connect: %v", err))
+			return err
+		}
+		defer conn.Close()
+		client := proto00.NewLinkerClient(conn)
+		res, err := client.Info(context.Background(), &proto00.InfoReq{})
+		if err != nil {
+			utils.Error(
+				fmt.Sprintf(
+					"[Client] Error while calling Info RPC: %v",
+					err,
+				),
+			)
+			return err
+		}
+		utils.Debug(fmt.Sprintf("INFO RES:\t%v", res))
 	default:
 		utils.Error(fmt.Sprintf("Bad stm.st %v", s.st))
 	}
 	return nil
+}
+
+func (s *RaftSTM) TmpSetLeaderState() {
+	s.st = stLeader
 }
