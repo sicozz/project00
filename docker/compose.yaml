@@ -6,8 +6,11 @@ services:
       - PORT=${NODE00_PORT}
     ports:
       - ${NODE00_PORT}:${NODE00_PORT}
+    networks:
+      net00:
+        ipv4_address: ${NODE00_IP}
     healthcheck:
-      test: [ "CMD-SHELL", "test -f /tmp/pilot-server.log" ]
+      test: [ "CMD-SHELL", "test -f /tmp/project00.log" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -18,22 +21,29 @@ services:
       - PORT=${NODE01_PORT}
     ports:
       - ${NODE01_PORT}:${NODE01_PORT}
-      # depends_on:
-      #   node00:
-      #     condition: service_healthy
+    networks:
+      net00:
+        ipv4_address: ${NODE01_IP}
+    depends_on:
+      node00:
+        condition: service_healthy
   node02:
     image: ${DOCKER_TAG}
     container_name: ${NODE02_NAME}
     environment:
       - PORT=${NODE02_PORT}
+    networks:
+      net00:
+        ipv4_address: ${NODE02_IP}
     ports:
       - ${NODE02_PORT}:${NODE02_PORT}
-      # depends_on:
-      #   node00:
-      #     condition: service_healthy
+    depends_on:
+      node00:
+        condition: service_healthy
 
 networks:
-  pilot-net:
+  net00:
     driver: bridge
     ipam:
-      driver: default
+      config:
+        - subnet: 192.168.100.0/24

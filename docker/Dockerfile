@@ -12,5 +12,6 @@ FROM debian:12-slim AS runner
 ARG TAG="project00-0.0.0"
 ENV TAG=${TAG}
 WORKDIR /
+COPY --from=builder /app/hosts.txt /hosts.txt
 COPY --from=builder /app/${TAG} /${TAG}
 CMD /${TAG}
