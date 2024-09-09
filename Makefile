@@ -64,6 +64,8 @@ distenv-monitor:
 distenv-connect:
 	NODE=$(NODE) docker exec -it $(NODE) /bin/bash
 
+distenv-run: distenv-down build-server build-client docker-build distenv-up
+
 # RUN
 run-server:
 	./$(SERVER_BIN)
