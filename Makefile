@@ -1,12 +1,17 @@
 APP				?= project00
 APP_VERSION		?= 0.0.1
 TAG				?= $(APP)-$(APP_VERSION)
-SERVER_ENTRY	?= cmd/${APP}/main.go
+SERVER_ENTRY	?= cmd/$(APP)/main.go
 SERVER_BIN		?= bin/$(TAG)
 DOCKER_TAG		?= $(APP):$(APP_VERSION)
 DOCKER_CONF		?= ./docker
 API_VERSION		?= 0.0
 PROTO_DIR		?= api/v$(API_VERSION)
+
+# DEBUG
+
+debug:
+	dlv debug ./cmd/$(APP)
 
 # BUILD
 build: build-proto build-server
