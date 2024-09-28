@@ -1,13 +1,23 @@
 package utils
 
 import (
+	"io"
 	"log"
 	"os"
 )
 
-func InitLog(logFile string) {
-	log.SetOutput(os.Stdout)
+func InitLog(logFileName string) {
+	logFile, err := os.OpenFile(
+		logFileName,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0666,
+	)
+	if err != nil {
+		log.Fatalf("[FATAL] Failed to open log file: %v", err)
+	}
+	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC)
+	Info("Successfully initiated log")
 }
 
 func Debug(msg string) {

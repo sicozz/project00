@@ -1,18 +1,20 @@
 APP				?= project00
 APP_VERSION		?= 0.0.1
 TAG				?= $(APP)-$(APP_VERSION)
-CLIENT_TAG		?= $(APP)_client-$(APP_VERSION)
-SERVER_ENTRY	?= cmd/server/main.go
-CLIENT_ENTRY	?= cmd/client/main.go
+SERVER_ENTRY	?= cmd/$(APP)/main.go
 SERVER_BIN		?= bin/$(TAG)
-CLIENT_BIN		?= bin/$(CLIENT_TAG)
 DOCKER_TAG		?= $(APP):$(APP_VERSION)
 DOCKER_CONF		?= ./docker
 API_VERSION		?= 0.0
 PROTO_DIR		?= api/v$(API_VERSION)
 
+# DEBUG
+
+debug:
+	dlv debug ./cmd/$(APP)
+
 # BUILD
-build: build-proto build-server build-client
+build: build-proto build-server
 
 build-proto:
 	@ protoc --proto_path=$(PROTO_DIR) \
@@ -23,12 +25,10 @@ build-proto:
 build-server:
 	@ go build -o $(SERVER_BIN) $(SERVER_ENTRY)
 
-build-client:
-	@ go build -o $(CLIENT_BIN) $(CLIENT_ENTRY)
-
 install-dev-deps:
-	@ go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-	@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+	@ go install github.com/go-delve/delve/cmd/dlv@latest
+	@ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # DOCKER
 docker-build:
@@ -42,7 +42,7 @@ docker-clean:
 
 # CLEAN
 clean:
-	@ rm -r $(SERVER_BIN) $(CLIENT_BIN)
+	@ rm -r $(SERVER_BIN)
 
 # DISTENV
 distenv-up:
@@ -64,9 +64,12 @@ distenv-monitor:
 distenv-connect:
 	NODE=$(NODE) docker exec -it $(NODE) /bin/bash
 
+distenv-run: distenv-down build-server docker-build distenv-up
+
 # RUN
-run-server:
+run:
 	./$(SERVER_BIN)
 
-run-client:
-	./$(CLIENT_BIN)
+# LINT
+lint:
+	@ golines --max-len=80 -w .

@@ -14,9 +14,10 @@ const (
 )
 
 type Config struct {
-	Host    string
-	Port    string
-	LogFile string
+	Host      string
+	Port      string
+	HostsFile string
+	LogFile   string
 }
 
 func BuildConfig() Config {
@@ -27,11 +28,13 @@ func BuildConfig() Config {
 	host := getEnvElseDefault("HOST", DEFAULT_HOST)
 	port := getEnvElseDefault("PORT", DEFAULT_PORT)
 	logFile := getEnvElseDefault("LOG_FILE", utils.DEFAULT_LOG_FILE)
+	hostsFile := getEnvElseDefault("HOSTS_FILE", utils.DEFAULT_HOSTS_FILE)
 
 	return Config{
-		Host:    host,
-		Port:    port,
-		LogFile: logFile,
+		Host:      host,
+		Port:      port,
+		LogFile:   logFile,
+		HostsFile: hostsFile,
 	}
 }
 
