@@ -42,7 +42,7 @@ docker-clean:
 
 # CLEAN
 clean:
-	@ rm -r $(SERVER_BIN)
+	@ rm -r $(SERVER_BIN) __debug*
 
 # DISTENV
 distenv-up:

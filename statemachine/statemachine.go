@@ -17,25 +17,27 @@ type StateMachine interface {
 }
 
 type RaftSTM struct {
-	srvC        chan string
-	trs         map[event]transition
-	st          state
-	hosts       map[uuid.UUID]utils.Host
-	localhostId uuid.UUID
+	srvC          chan string
+	trs           map[event]transition
+	st            state
+	hosts         map[uuid.UUID]utils.Host
+	localhostId   uuid.UUID
+	electionTimer *time.Timer
 }
 
 type state string
 
 const (
-	stFollower state = "stFollower"
-	stLeader   state = "stLeader"
+	stCandidate state = "stCandidate"
+	stFollower  state = "stFollower"
+	stLeader    state = "stLeader"
 )
 
 type event string
 
 const (
-	evHeartbeat     event = "evHeartbeat"
-	evLeaderTimeout event = "evLeaderTimeout"
+	evHeartbeat       event = "evHeartbeat"
+	evElectionTimeout event = "evElectionTimeout"
 )
 
 type transition string
@@ -50,7 +52,7 @@ func NewRaftSTM(
 	selfHostId uuid.UUID,
 ) *RaftSTM {
 	trs := map[event]transition{
-		evLeaderTimeout: tsFollowerToLeader,
+		evElectionTimeout: tsFollowerToLeader,
 	}
 
 	return &RaftSTM{
@@ -65,6 +67,7 @@ func NewRaftSTM(
 func (s *RaftSTM) Run() error {
 	go s.handleServerChan()
 	go s.handleClientChan()
+	go s.handleElectionTimeout()
 	return nil
 }
 
@@ -76,8 +79,10 @@ func (s *RaftSTM) handleServerChan() error {
 			switch ev {
 			case string(evHeartbeat):
 				utils.Info(fmt.Sprintf("[Server] Follower: %v", ev))
-			case string(evLeaderTimeout):
-				utils.Info(fmt.Sprintf("[Server] Follower: %v", ev))
+			case string(evElectionTimeout):
+				utils.Info(fmt.Sprintf("[Server] Follower TOUT: %v", ev))
+				utils.Info("[Server] CHANGING TO LEADER")
+				s.st = stLeader
 			default:
 				utils.Info(fmt.Sprintf("[Server] Follower: %v (unknown)", ev))
 			}
@@ -85,8 +90,8 @@ func (s *RaftSTM) handleServerChan() error {
 			switch ev {
 			case string(evHeartbeat):
 				utils.Info(fmt.Sprintf("[Server] Leader: %v", ev))
-			case string(evLeaderTimeout):
-				utils.Info(fmt.Sprintf("[Server] Leader: %v", ev))
+			case string(evElectionTimeout):
+				utils.Info(fmt.Sprintf("[Server] Leader TOUT: %v", ev))
 			default:
 				utils.Info(fmt.Sprintf("[Server] Leader: %v (unknown)", ev))
 			}
@@ -160,6 +165,22 @@ func (s *RaftSTM) handleClientChan() error {
 		utils.Error(fmt.Sprintf("Bad stm.st %v", s.st))
 	}
 	return nil
+}
+
+func (s *RaftSTM) handleElectionTimeout() {
+	s.resetElectionTimer()
+	for {
+		<-s.electionTimer.C
+		s.srvC <- string(evElectionTimeout)
+	}
+}
+
+func (s *RaftSTM) resetElectionTimer() {
+	if s.electionTimer != nil {
+		s.electionTimer.Stop()
+	}
+	timeout := utils.RandomElectionTimeout()
+	s.electionTimer = time.NewTimer(timeout)
 }
 
 func (s *RaftSTM) TmpSetLeaderState() {
