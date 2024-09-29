@@ -4,7 +4,7 @@ import (
 	"context"
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
-	"github.com/sicozz/project00/handler"
+	"github.com/sicozz/project00/statemachine"
 )
 
 type Server interface {
@@ -12,28 +12,27 @@ type Server interface {
 }
 
 type Server00 struct {
-	stmC chan string
+	stm statemachine.StateMachine
 	proto00.UnimplementedLinkerServer
 }
 
-func NewServer00(stmC chan string) *Server00 {
-	return &Server00{stmC: stmC}
+func NewServer00(stm statemachine.StateMachine) *Server00 {
+	return &Server00{stm: stm}
 }
 
 func (s *Server00) Info(
 	ctx context.Context,
 	req *proto00.InfoReq,
 ) (res *proto00.InfoRes, err error) {
-	return handler.QueryGetServiceInfo()
+	return s.stm.RpcInfo()
 }
 
 func (s *Server00) Subscribe(
 	req *proto00.SubscribeReq,
 	stream proto00.Linker_SubscribeServer,
 ) error {
-	return handler.HandleSubscription(stream, s.stmC)
+	return s.stm.RpcSubscribe(stream)
 }
 
 func (s *Server00) Shutdown() {
-	close(s.stmC)
 }

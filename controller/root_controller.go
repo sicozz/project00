@@ -36,7 +36,6 @@ func NewRootController() (rc RootController, err error) {
 		return RootController{}, err
 	}
 	exitC := make(chan int)
-	stmAndSrvCh := make(chan string)
 	hosts, err := utils.DiscoverHosts(conf.HostsFile)
 	if err != nil {
 		utils.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
@@ -47,16 +46,12 @@ func NewRootController() (rc RootController, err error) {
 		utils.Error(fmt.Sprintf("Failed to get own host: %v", err))
 		return RootController{}, err
 	}
-	stm00 := statemachine.NewRaftSTM(stmAndSrvCh, hosts, localhostId)
-	localhost := hosts[localhostId]
-	if localhost.Ip() == "192.168.100.10" {
-		stm00.TmpSetLeaderState()
-	}
-	srv00 := server.NewServer00(stmAndSrvCh)
+	stm := statemachine.StateMachine(statemachine.NewRaftSTM(hosts, localhostId))
+	srv00 := server.NewServer00(stm)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)
 	return RootController{
-		stm:   statemachine.StateMachine(stm00),
+		stm:   stm,
 		srv:   server.Server(srv00),
 		lis:   lis,
 		gSrv:  gSrv,
