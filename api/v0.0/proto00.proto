@@ -10,6 +10,7 @@ message InfoReq {}
 message InfoRes {
     string version = 1;
     string banner = 2;
+    int32 term = 3;
 }
 
 message SubscribeReq {}

@@ -19,6 +19,7 @@ type RaftSTM struct {
 	hosts         map[uuid.UUID]utils.Host
 	localhostId   uuid.UUID
 	electionTimer *time.Timer
+	currentTerm   int
 }
 
 type state string
@@ -55,6 +56,7 @@ func NewRaftSTM(
 		st:          stFollower,
 		hosts:       hosts,
 		localhostId: selfHostId,
+		currentTerm: 1000,
 	}
 }
 
@@ -133,7 +135,8 @@ func (s *RaftSTM) handleElectionTimeout() {
 	s.resetElectionTimer()
 	for {
 		<-s.electionTimer.C
-		utils.Info("Election timeout")
+		utils.Info("Election timeout, becoming Leader...")
+		s.st = stLeader
 	}
 }
 
@@ -153,13 +156,13 @@ func (s *RaftSTM) RpcInfo() (*proto00.InfoRes, error) {
 	return &proto00.InfoRes{
 		Version: programInfo.Version,
 		Banner:  programInfo.Banner,
+		Term:    int32(s.currentTerm),
 	}, nil
 }
 
 func (s *RaftSTM) RpcSubscribe(
 	stream proto00.Linker_SubscribeServer,
 ) error {
-	term := 1000
 	for {
 		select {
 		case <-stream.Context().Done():
@@ -167,9 +170,15 @@ func (s *RaftSTM) RpcSubscribe(
 			utils.Info(fmt.Sprintf("Follower unsubscribed: %v", err))
 			return err
 		default:
-			stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", term)})
-			term = term + 1
-			time.Sleep(1 * time.Second)
+			switch s.st {
+			case stFollower:
+				utils.Warn("Follower should redirect")
+				return nil
+			case stLeader:
+				stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", s.currentTerm)})
+				s.currentTerm += 1
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 }
