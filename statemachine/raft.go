@@ -17,6 +17,7 @@ type RaftSTM struct {
 	localhostId   uuid.UUID
 	electionTimer *time.Timer
 	currentTerm   int
+	votedFor      uuid.UUID
 }
 
 type state string
@@ -66,7 +67,6 @@ func (s *RaftSTM) handleElectionTimeout() {
 	s.resetElectionTimer()
 	for {
 		<-s.electionTimer.C
-		utils.Info("Election timeout, becoming Candidate...")
 		s.st = stCandidate
 		s.startElection()
 	}
@@ -125,8 +125,25 @@ func (s *RaftSTM) RpcSubscribe(
 }
 
 func (s *RaftSTM) RpcRequestVote() (*proto00.RequestVoteRes, error) {
-	return &proto00.RequestVoteRes{
-		Term:        int32(s.currentTerm),
-		VoteGranted: true,
-	}, nil
+	switch s.st {
+	case stFollower:
+		return &proto00.RequestVoteRes{
+			Term:        int32(s.currentTerm),
+			VoteGranted: true,
+		}, nil
+	case stCandidate:
+		return &proto00.RequestVoteRes{
+			Term:        int32(s.currentTerm),
+			VoteGranted: false,
+		}, nil
+	case stLeader:
+		return &proto00.RequestVoteRes{
+			Term:        int32(s.currentTerm),
+			VoteGranted: false,
+		}, nil
+	default:
+		err := fmt.Errorf("Invalid state, declining vote")
+		utils.Error(err.Error())
+		return nil, err
+	}
 }
