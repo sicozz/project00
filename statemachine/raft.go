@@ -1,16 +1,13 @@
 package statemachine
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/google/uuid"
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/datatype"
 	"github.com/sicozz/project00/utils"
-	"google.golang.org/grpc"
 )
 
 type RaftSTM struct {
@@ -61,73 +58,7 @@ func NewRaftSTM(
 }
 
 func (s *RaftSTM) Run() error {
-	go s.handleClient()
 	go s.handleElectionTimeout()
-	return nil
-}
-
-func (s *RaftSTM) handleClient() error {
-	switch s.st {
-	case stFollower:
-		targetNode := "192.168.100.10:50050"
-		conn, err := grpc.Dial(targetNode, grpc.WithInsecure())
-		if err != nil {
-			utils.Error(fmt.Sprintf("[Client] Failed to connect: %v", err))
-			conn, err = grpc.Dial(targetNode, grpc.WithInsecure())
-			// return err
-		}
-		defer conn.Close()
-		client := proto00.NewLinkerClient(conn)
-		req := &proto00.SubscribeReq{}
-		stream, err := client.Subscribe(context.Background(), req)
-		if err != nil {
-			utils.Error(
-				fmt.Sprintf(
-					"[Client] Error while calling Subscribe RPC: %v",
-					err,
-				),
-			)
-			return err
-		}
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				utils.Error(
-					fmt.Sprintf(
-						"[Client] Error while receiving heartbeat: %v",
-						err,
-					),
-				)
-			}
-			utils.Info(fmt.Sprintf("[Client] Heartbeat [%v]", resp))
-		}
-	case stLeader:
-		time.Sleep(3 * time.Second)
-		targetNode := "192.168.100.11:50051"
-		conn, err := grpc.Dial(targetNode, grpc.WithInsecure())
-		if err != nil {
-			utils.Error(fmt.Sprintf("[Client] Failed to connect: %v", err))
-			return err
-		}
-		defer conn.Close()
-		client := proto00.NewLinkerClient(conn)
-		res, err := client.Info(context.Background(), &proto00.InfoReq{})
-		if err != nil {
-			utils.Error(
-				fmt.Sprintf(
-					"[Client] Error while calling Info RPC: %v",
-					err,
-				),
-			)
-			return err
-		}
-		utils.Debug(fmt.Sprintf("INFO RES:\t%v", res))
-	default:
-		utils.Error(fmt.Sprintf("Bad stm.st %v", s.st))
-	}
 	return nil
 }
 
@@ -135,8 +66,9 @@ func (s *RaftSTM) handleElectionTimeout() {
 	s.resetElectionTimer()
 	for {
 		<-s.electionTimer.C
-		utils.Info("Election timeout, becoming Leader...")
-		s.st = stLeader
+		utils.Info("Election timeout, becoming Candidate...")
+		s.st = stCandidate
+		s.startElection()
 	}
 }
 
@@ -146,6 +78,15 @@ func (s *RaftSTM) resetElectionTimer() {
 	}
 	timeout := utils.RandomElectionTimeout()
 	s.electionTimer = time.NewTimer(timeout)
+}
+
+func (s *RaftSTM) startElection() {
+	s.currentTerm += 100
+	s.resetElectionTimer()
+	// Send RequestVote RPCs to all other servers
+	// If votes received from majority of servers: become leader
+	// If AppendEntries RPC received from new leader: convert to follower
+	// If <-s.electionTimer.C start new election
 }
 
 func (s *RaftSTM) RpcInfo() (*proto00.InfoRes, error) {
@@ -174,7 +115,7 @@ func (s *RaftSTM) RpcSubscribe(
 			case stFollower:
 				utils.Warn("Follower should redirect")
 				return nil
-			case stLeader:
+			case stCandidate:
 				stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", s.currentTerm)})
 				s.currentTerm += 1
 				time.Sleep(1 * time.Second)

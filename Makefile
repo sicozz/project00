@@ -13,6 +13,9 @@ PROTO_DIR		?= api/v$(API_VERSION)
 debug:
 	dlv debug ./cmd/$(APP)
 
+debug-sig-kill:
+	ps aux | grep __debug | grep -v grep | awk '{print $$2}' | xargs -r kill
+
 # BUILD
 build: build-proto build-server
 

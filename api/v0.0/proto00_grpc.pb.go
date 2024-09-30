@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Linker_Info_FullMethodName      = "/Linker/Info"
-	Linker_Subscribe_FullMethodName = "/Linker/Subscribe"
+	Linker_Info_FullMethodName        = "/Linker/Info"
+	Linker_Subscribe_FullMethodName   = "/Linker/Subscribe"
+	Linker_RequestVote_FullMethodName = "/Linker/RequestVote"
 )
 
 // LinkerClient is the client API for Linker service.
@@ -29,6 +30,7 @@ const (
 type LinkerClient interface {
 	Info(ctx context.Context, in *InfoReq, opts ...grpc.CallOption) (*InfoRes, error)
 	Subscribe(ctx context.Context, in *SubscribeReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Heartbeat], error)
+	RequestVote(ctx context.Context, in *RequestVoteReq, opts ...grpc.CallOption) (*RequestVoteRes, error)
 }
 
 type linkerClient struct {
@@ -68,12 +70,23 @@ func (c *linkerClient) Subscribe(ctx context.Context, in *SubscribeReq, opts ...
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Linker_SubscribeClient = grpc.ServerStreamingClient[Heartbeat]
 
+func (c *linkerClient) RequestVote(ctx context.Context, in *RequestVoteReq, opts ...grpc.CallOption) (*RequestVoteRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestVoteRes)
+	err := c.cc.Invoke(ctx, Linker_RequestVote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LinkerServer is the server API for Linker service.
 // All implementations must embed UnimplementedLinkerServer
 // for forward compatibility.
 type LinkerServer interface {
 	Info(context.Context, *InfoReq) (*InfoRes, error)
 	Subscribe(*SubscribeReq, grpc.ServerStreamingServer[Heartbeat]) error
+	RequestVote(context.Context, *RequestVoteReq) (*RequestVoteRes, error)
 	mustEmbedUnimplementedLinkerServer()
 }
 
@@ -89,6 +102,9 @@ func (UnimplementedLinkerServer) Info(context.Context, *InfoReq) (*InfoRes, erro
 }
 func (UnimplementedLinkerServer) Subscribe(*SubscribeReq, grpc.ServerStreamingServer[Heartbeat]) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
+}
+func (UnimplementedLinkerServer) RequestVote(context.Context, *RequestVoteReq) (*RequestVoteRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestVote not implemented")
 }
 func (UnimplementedLinkerServer) mustEmbedUnimplementedLinkerServer() {}
 func (UnimplementedLinkerServer) testEmbeddedByValue()                {}
@@ -140,6 +156,24 @@ func _Linker_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Linker_SubscribeServer = grpc.ServerStreamingServer[Heartbeat]
 
+func _Linker_RequestVote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestVoteReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LinkerServer).RequestVote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Linker_RequestVote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LinkerServer).RequestVote(ctx, req.(*RequestVoteReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Linker_ServiceDesc is the grpc.ServiceDesc for Linker service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -150,6 +184,10 @@ var Linker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Info",
 			Handler:    _Linker_Info_Handler,
+		},
+		{
+			MethodName: "RequestVote",
+			Handler:    _Linker_RequestVote_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -4,6 +4,7 @@ option go_package = "github.com/sicozz/project00/proto00/v1.0/proto00";
 service Linker {
     rpc Info (InfoReq) returns (InfoRes);
     rpc Subscribe (SubscribeReq) returns (stream Heartbeat);
+    rpc RequestVote (RequestVoteReq) returns (RequestVoteRes);
 }
 
 message InfoReq {}
@@ -16,4 +17,15 @@ message InfoRes {
 message SubscribeReq {}
 message Heartbeat {
     string term = 1;
+}
+
+message RequestVoteReq {
+    int32 term = 1;
+    // string candidateId = 2;
+    // string lastLogIndex = 3;
+    // string lastLogTerm = 3;
+}
+message RequestVoteRes {
+    int32 term = 1;
+    bool voteGranted = 2;
 }
