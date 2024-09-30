@@ -123,3 +123,10 @@ func (s *RaftSTM) RpcSubscribe(
 		}
 	}
 }
+
+func (s *RaftSTM) RpcRequestVote() (*proto00.RequestVoteRes, error) {
+	return &proto00.RequestVoteRes{
+		Term:        int32(s.currentTerm),
+		VoteGranted: true,
+	}, nil
+}

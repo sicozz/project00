@@ -23,7 +23,7 @@ func NewServer00(stm statemachine.StateMachine) *Server00 {
 func (s *Server00) Info(
 	ctx context.Context,
 	req *proto00.InfoReq,
-) (res *proto00.InfoRes, err error) {
+) (*proto00.InfoRes, error) {
 	return s.stm.RpcInfo()
 }
 
@@ -32,6 +32,13 @@ func (s *Server00) Subscribe(
 	stream proto00.Linker_SubscribeServer,
 ) error {
 	return s.stm.RpcSubscribe(stream)
+}
+
+func (s *Server00) RequestVote(
+	ctx context.Context,
+	req *proto00.RequestVoteReq,
+) (*proto00.RequestVoteRes, error) {
+	return s.stm.RpcRequestVote()
 }
 
 func (s *Server00) Shutdown() {
