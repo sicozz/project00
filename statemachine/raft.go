@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/datatype"
+	"github.com/sicozz/project00/requester"
 	"github.com/sicozz/project00/utils"
 )
 
@@ -82,11 +83,35 @@ func (s *RaftSTM) resetElectionTimer() {
 
 func (s *RaftSTM) startElection() {
 	s.currentTerm += 100
+	s.voteFor(s.localhostId)
+	voteCount := 0
 	s.resetElectionTimer()
+	// TODO: use channels and waitgroups to listen for +1 votedCount to avoid
+	// shared variable
+	for _, h := range s.hosts {
+		if h.Id() == s.localhostId {
+			continue
+		}
+		// TODO: implemente RpcRequestVote
+		res, err := requester.RpcRequestVote(h, proto00.RequestVoteReq{})
+		if err != nil {
+			utils.Error(fmt.Sprintf("Failed to request vote: %v", err))
+			continue
+		}
+		if !res.VoteGranted {
+			continue
+		}
+		voteCount += 1
+	}
+	utils.Debug(fmt.Sprintf("Got %v votes out of %v", voteCount, len(s.hosts)))
 	// Send RequestVote RPCs to all other servers
 	// If votes received from majority of servers: become leader
 	// If AppendEntries RPC received from new leader: convert to follower
 	// If <-s.electionTimer.C start new election
+}
+
+func (s *RaftSTM) voteFor(candidateId uuid.UUID) {
+	s.votedFor = candidateId
 }
 
 func (s *RaftSTM) RpcInfo() (*proto00.InfoRes, error) {
