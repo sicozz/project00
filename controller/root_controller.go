@@ -11,14 +11,16 @@ import (
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
 	"github.com/sicozz/project00/config"
+	"github.com/sicozz/project00/info"
+	"github.com/sicozz/project00/logger"
+	"github.com/sicozz/project00/network"
+	"github.com/sicozz/project00/node"
 	"github.com/sicozz/project00/server"
-	"github.com/sicozz/project00/statemachine"
-	"github.com/sicozz/project00/utils"
 	"google.golang.org/grpc"
 )
 
 type RootController struct {
-	stm   statemachine.StateMachine
+	stm   node.Node
 	srv   server.Server
 	lis   net.Listener
 	gSrv  *grpc.Server
@@ -28,25 +30,25 @@ type RootController struct {
 
 func NewRootController() (rc RootController, err error) {
 	conf := config.BuildConfig()
-	utils.InitLog(conf.LogFile)
+	logger.InitLog(conf.LogFile)
 	addr := conf.GetBindAddr()
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		utils.Error(fmt.Sprintf("Cannot create listener: %v", err))
+		logger.Error(fmt.Sprintf("Cannot create listener: %v", err))
 		return RootController{}, err
 	}
 	exitC := make(chan int)
-	hosts, err := utils.DiscoverHosts(conf.HostsFile)
+	hosts, err := network.DiscoverHosts(conf.HostsFile)
 	if err != nil {
-		utils.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
+		logger.Error(fmt.Sprintf("Failed to discover hosts: %v", err))
 		return RootController{}, err
 	}
-	localhostId, err := utils.GetLocalHostIp(hosts)
+	localhostId, err := network.GetLocalHostIp(hosts)
 	if err != nil {
-		utils.Error(fmt.Sprintf("Failed to get own host: %v", err))
+		logger.Error(fmt.Sprintf("Failed to get own host: %v", err))
 		return RootController{}, err
 	}
-	stm := statemachine.StateMachine(statemachine.NewRaftSTM(hosts, localhostId))
+	stm := node.Node(node.NewRaftSTM(hosts, localhostId))
 	srv00 := server.NewServer00(stm)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)
@@ -67,36 +69,36 @@ func (rc *RootController) Launch() {
 	go rc.startStateMachine()
 	eC := <-rc.exitC
 	close(rc.exitC)
-	utils.Info(fmt.Sprintf("Exiting %v: %v", utils.BANNER, eC))
+	logger.Info(fmt.Sprintf("Exiting %v: %v", info.BANNER, eC))
 }
 
 func (rc *RootController) shutDown(exitCode int) {
 	_, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	rc.srv.Shutdown()
-	utils.Info("Shutting down: server stoped")
+	logger.Info("Shutting down: server stoped")
 	rc.gSrv.GracefulStop()
-	utils.Info("Shuting down: gRPC server stoped")
+	logger.Info("Shuting down: gRPC server stoped")
 	rc.lis.Close()
-	utils.Info("Shuting down: listener closed")
+	logger.Info("Shuting down: listener closed")
 	rc.exitC <- exitCode
 }
 
 func (rc *RootController) startServer() error {
-	utils.Info(fmt.Sprintf("Server listening on port: %v", rc.conf.Port))
+	logger.Info(fmt.Sprintf("Server listening on port: %v", rc.conf.Port))
 	err := rc.gSrv.Serve(rc.lis)
 	if err != nil {
-		utils.Error(fmt.Sprintf("Server crashed on: %v", err))
+		logger.Error(fmt.Sprintf("Server crashed on: %v", err))
 		rc.shutDown(1)
 	}
 	return nil
 }
 
 func (rc *RootController) startStateMachine() error {
-	utils.Info(fmt.Sprintf("State machine activated"))
+	logger.Info(fmt.Sprintf("State machine activated"))
 	err := rc.stm.Run()
 	if err != nil {
-		utils.Error(fmt.Sprintf("State machine crashed on: %v", err))
+		logger.Error(fmt.Sprintf("State machine crashed on: %v", err))
 		rc.shutDown(1)
 	}
 	return nil
@@ -107,6 +109,6 @@ func (rc *RootController) handleSignals() {
 	signal.Notify(signalC, syscall.SIGINT, syscall.SIGTERM)
 	rcvdSignal := <-signalC
 	close(signalC)
-	utils.Info(fmt.Sprintf("Recieved signal: %v", rcvdSignal))
+	logger.Info(fmt.Sprintf("Recieved signal: %v", rcvdSignal))
 	rc.shutDown(0)
 }

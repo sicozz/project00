@@ -1,10 +1,12 @@
-package utils
+package logger
 
 import (
 	"io"
 	"log"
 	"os"
 )
+
+const DEFAULT_LOG_FILE = "/tmp/project00.log"
 
 func InitLog(logFileName string) {
 	logFile, err := os.OpenFile(

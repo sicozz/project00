@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/sicozz/project00/utils"
+	"github.com/sicozz/project00/logger"
+	"github.com/sicozz/project00/network"
 )
 
 const (
@@ -27,8 +28,8 @@ func BuildConfig() Config {
 	}
 	host := getEnvElseDefault("HOST", DEFAULT_HOST)
 	port := getEnvElseDefault("PORT", DEFAULT_PORT)
-	logFile := getEnvElseDefault("LOG_FILE", utils.DEFAULT_LOG_FILE)
-	hostsFile := getEnvElseDefault("HOSTS_FILE", utils.DEFAULT_HOSTS_FILE)
+	logFile := getEnvElseDefault("LOG_FILE", logger.DEFAULT_LOG_FILE)
+	hostsFile := getEnvElseDefault("HOSTS_FILE", network.DEFAULT_HOSTS_FILE)
 
 	return Config{
 		Host:      host,

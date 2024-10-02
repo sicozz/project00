@@ -1,4 +1,4 @@
-package utils
+package network
 
 import (
 	"bufio"
@@ -8,7 +8,10 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/sicozz/project00/logger"
 )
+
+const DEFAULT_HOSTS_FILE = "hosts.txt"
 
 type Host struct {
 	id uuid.UUID
@@ -30,7 +33,7 @@ func (h *Host) Ip() string {
 func DiscoverHosts(hostsFile string) (map[uuid.UUID]Host, error) {
 	hostsDb, err := os.Open(hostsFile)
 	if err != nil {
-		Error(fmt.Sprintf("Failed to open hosts file: %v", hostsFile))
+		logger.Error(fmt.Sprintf("Failed to open hosts file: %v", hostsFile))
 		return nil, err
 	}
 	scanner := bufio.NewScanner(hostsDb)

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	proto00 "github.com/sicozz/project00/api/v0.0"
-	"github.com/sicozz/project00/statemachine"
+	"github.com/sicozz/project00/node"
 )
 
 type Server interface {
@@ -12,11 +12,11 @@ type Server interface {
 }
 
 type Server00 struct {
-	stm statemachine.StateMachine
+	stm node.Node
 	proto00.UnimplementedLinkerServer
 }
 
-func NewServer00(stm statemachine.StateMachine) *Server00 {
+func NewServer00(stm node.Node) *Server00 {
 	return &Server00{stm: stm}
 }
 

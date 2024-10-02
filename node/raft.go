@@ -1,20 +1,22 @@
-package statemachine
+package node
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
 	proto00 "github.com/sicozz/project00/api/v0.0"
-	"github.com/sicozz/project00/datatype"
+	"github.com/sicozz/project00/info"
+	"github.com/sicozz/project00/logger"
+	"github.com/sicozz/project00/network"
 	"github.com/sicozz/project00/requester"
-	"github.com/sicozz/project00/utils"
 )
 
-type RaftSTM struct {
+type RaftNode struct {
 	trs           map[event]transition
 	st            state
-	hosts         map[uuid.UUID]utils.Host
+	hosts         map[uuid.UUID]network.Host
 	localhostId   uuid.UUID
 	electionTimer *time.Timer
 	currentTerm   int
@@ -43,14 +45,14 @@ const (
 )
 
 func NewRaftSTM(
-	hosts map[uuid.UUID]utils.Host,
+	hosts map[uuid.UUID]network.Host,
 	selfHostId uuid.UUID,
-) *RaftSTM {
+) *RaftNode {
 	trs := map[event]transition{
 		evElectionTimeout: tsFollowerToLeader,
 	}
 
-	return &RaftSTM{
+	return &RaftNode{
 		trs:         trs,
 		st:          stFollower,
 		hosts:       hosts,
@@ -59,12 +61,12 @@ func NewRaftSTM(
 	}
 }
 
-func (s *RaftSTM) Run() error {
+func (s *RaftNode) Run() error {
 	go s.handleElectionTimeout()
 	return nil
 }
 
-func (s *RaftSTM) handleElectionTimeout() {
+func (s *RaftNode) handleElectionTimeout() {
 	s.resetElectionTimer()
 	for {
 		<-s.electionTimer.C
@@ -73,15 +75,21 @@ func (s *RaftSTM) handleElectionTimeout() {
 	}
 }
 
-func (s *RaftSTM) resetElectionTimer() {
+func (s *RaftNode) resetElectionTimer() {
 	if s.electionTimer != nil {
 		s.electionTimer.Stop()
 	}
-	timeout := utils.RandomElectionTimeout()
+	timeout := randomElectionTimeout()
 	s.electionTimer = time.NewTimer(timeout)
 }
 
-func (s *RaftSTM) startElection() {
+func randomElectionTimeout() time.Duration {
+	randRange := RAFT_MAX_ELECTION_TOUT - RAFT_MIN_ELECTION_TOUT
+	randTime := (rand.Int63n(int64(randRange)) + RAFT_MIN_ELECTION_TOUT) * int64(time.Millisecond)
+	return time.Duration(randTime)
+}
+
+func (s *RaftNode) startElection() {
 	s.currentTerm += 100
 	s.voteFor(s.localhostId)
 	voteCount := 0
@@ -95,7 +103,7 @@ func (s *RaftSTM) startElection() {
 		// TODO: implemente RpcRequestVote
 		res, err := requester.RpcRequestVote(h, proto00.RequestVoteReq{})
 		if err != nil {
-			utils.Error(fmt.Sprintf("Failed to request vote: %v", err))
+			logger.Error(fmt.Sprintf("Failed to request vote: %v", err))
 			continue
 		}
 		if !res.VoteGranted {
@@ -103,21 +111,21 @@ func (s *RaftSTM) startElection() {
 		}
 		voteCount += 1
 	}
-	utils.Debug(fmt.Sprintf("Got %v votes out of %v", voteCount, len(s.hosts)))
+	logger.Debug(fmt.Sprintf("Got %v votes out of %v", voteCount, len(s.hosts)))
 	// Send RequestVote RPCs to all other servers
 	// If votes received from majority of servers: become leader
 	// If AppendEntries RPC received from new leader: convert to follower
 	// If <-s.electionTimer.C start new election
 }
 
-func (s *RaftSTM) voteFor(candidateId uuid.UUID) {
+func (s *RaftNode) voteFor(candidateId uuid.UUID) {
 	s.votedFor = candidateId
 }
 
-func (s *RaftSTM) RpcInfo() (*proto00.InfoRes, error) {
-	programInfo := datatype.ProgramInfo{
-		Version: utils.VERSION,
-		Banner:  utils.BANNER,
+func (s *RaftNode) RpcInfo() (*proto00.InfoRes, error) {
+	programInfo := info.ProgramInfo{
+		Version: info.VERSION,
+		Banner:  info.BANNER,
 	}
 	return &proto00.InfoRes{
 		Version: programInfo.Version,
@@ -126,19 +134,19 @@ func (s *RaftSTM) RpcInfo() (*proto00.InfoRes, error) {
 	}, nil
 }
 
-func (s *RaftSTM) RpcSubscribe(
+func (s *RaftNode) RpcSubscribe(
 	stream proto00.Linker_SubscribeServer,
 ) error {
 	for {
 		select {
 		case <-stream.Context().Done():
 			err := stream.Context().Err()
-			utils.Info(fmt.Sprintf("Follower unsubscribed: %v", err))
+			logger.Info(fmt.Sprintf("Follower unsubscribed: %v", err))
 			return err
 		default:
 			switch s.st {
 			case stFollower:
-				utils.Warn("Follower should redirect")
+				logger.Warn("Follower should redirect")
 				return nil
 			case stCandidate:
 				stream.Send(&proto00.Heartbeat{Term: fmt.Sprintf("%v", s.currentTerm)})
@@ -149,7 +157,7 @@ func (s *RaftSTM) RpcSubscribe(
 	}
 }
 
-func (s *RaftSTM) RpcRequestVote() (*proto00.RequestVoteRes, error) {
+func (s *RaftNode) RpcRequestVote() (*proto00.RequestVoteRes, error) {
 	switch s.st {
 	case stFollower:
 		return &proto00.RequestVoteRes{
@@ -168,7 +176,7 @@ func (s *RaftSTM) RpcRequestVote() (*proto00.RequestVoteRes, error) {
 		}, nil
 	default:
 		err := fmt.Errorf("Invalid state, declining vote")
-		utils.Error(err.Error())
+		logger.Error(err.Error())
 		return nil, err
 	}
 }
