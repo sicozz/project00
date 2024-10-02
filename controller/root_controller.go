@@ -20,7 +20,7 @@ import (
 )
 
 type RootController struct {
-	stm   node.Node
+	node  node.Node
 	srv   server.Server
 	lis   net.Listener
 	gSrv  *grpc.Server
@@ -48,12 +48,12 @@ func NewRootController() (rc RootController, err error) {
 		logger.Error(fmt.Sprintf("Failed to get own host: %v", err))
 		return RootController{}, err
 	}
-	stm := node.Node(node.NewRaftSTM(hosts, localhostId))
-	srv00 := server.NewServer00(stm)
+	node := node.Node(node.NewRaftNode(hosts, localhostId))
+	srv00 := server.NewServer00(node)
 	gSrv := grpc.NewServer()
 	proto00.RegisterLinkerServer(gSrv, srv00)
 	return RootController{
-		stm:   stm,
+		node:  node,
 		srv:   server.Server(srv00),
 		lis:   lis,
 		gSrv:  gSrv,
@@ -66,7 +66,7 @@ func (rc *RootController) Launch() {
 	// TODO: Add options for project00
 	go rc.handleSignals()
 	go rc.startServer()
-	go rc.startStateMachine()
+	go rc.launchNode()
 	eC := <-rc.exitC
 	close(rc.exitC)
 	logger.Info(fmt.Sprintf("Exiting %v: %v", info.BANNER, eC))
@@ -94,11 +94,11 @@ func (rc *RootController) startServer() error {
 	return nil
 }
 
-func (rc *RootController) startStateMachine() error {
-	logger.Info(fmt.Sprintf("State machine activated"))
-	err := rc.stm.Run()
+func (rc *RootController) launchNode() error {
+	logger.Info(fmt.Sprintf("Node launched"))
+	err := rc.node.Run()
 	if err != nil {
-		logger.Error(fmt.Sprintf("State machine crashed on: %v", err))
+		logger.Error(fmt.Sprintf("Node crashed on: %v", err))
 		rc.shutDown(1)
 	}
 	return nil

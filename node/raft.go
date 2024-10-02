@@ -44,7 +44,7 @@ const (
 	tsFollowerToLeader transition = "tsFollowerToLeader"
 )
 
-func NewRaftSTM(
+func NewRaftNode(
 	hosts map[uuid.UUID]network.Host,
 	selfHostId uuid.UUID,
 ) *RaftNode {

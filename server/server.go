@@ -12,33 +12,33 @@ type Server interface {
 }
 
 type Server00 struct {
-	stm node.Node
+	node node.Node
 	proto00.UnimplementedLinkerServer
 }
 
-func NewServer00(stm node.Node) *Server00 {
-	return &Server00{stm: stm}
+func NewServer00(node node.Node) *Server00 {
+	return &Server00{node: node}
 }
 
 func (s *Server00) Info(
 	ctx context.Context,
 	req *proto00.InfoReq,
 ) (*proto00.InfoRes, error) {
-	return s.stm.RpcInfo()
+	return s.node.RpcInfo()
 }
 
 func (s *Server00) Subscribe(
 	req *proto00.SubscribeReq,
 	stream proto00.Linker_SubscribeServer,
 ) error {
-	return s.stm.RpcSubscribe(stream)
+	return s.node.RpcSubscribe(stream)
 }
 
 func (s *Server00) RequestVote(
 	ctx context.Context,
 	req *proto00.RequestVoteReq,
 ) (*proto00.RequestVoteRes, error) {
-	return s.stm.RpcRequestVote()
+	return s.node.RpcRequestVote()
 }
 
 func (s *Server00) Shutdown() {
